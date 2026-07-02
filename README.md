@@ -1,12 +1,12 @@
-# Algorithms for Large-Scale Data — Project 2
+# Algorithms for Large-Scale Data, Project 2
 
 This is my second project for the **Algorithms for Large-Scale Data** course at CSE, University of Ioannina. I build a variant of the Count-Min Sketch and use it to find a "heavy" element inside a data stream.
 
 ## What the exercise asks
 
-I have 1000 random binary strings, each one 100 bits. 999 of them show up with weight 10, and one special string shows up with weight 100 — that's the heavy element we want to find. The catch is that we're not allowed to keep the whole stream in memory, only a small summary of it.
+I have 1000 random binary strings, each one 100 bits. 999 of them show up with weight 10, and one special string shows up with weight 100, and that one is the heavy element we want to find. The catch is that we're not allowed to keep the whole stream in memory, only a small summary of it.
 
-The hard part is that a plain Count-Min Sketch only tells you how often something appears, not what it actually is. So I extended the structure: besides the weight sum of each cell, I also keep a separate sum for every bit. So when the heavy element lands alone in a cell, the cell's sum comes out 100 and every bit sum is either 0 or 100 — and I rebuild the string bit by bit.
+The hard part is that a plain Count-Min Sketch only tells you how often something appears, not what it actually is. So I extended the structure: besides the weight sum of each cell, I also keep a separate sum for every bit. So when the heavy element lands alone in a cell, the cell's sum comes out 100 and every bit sum is either 0 or 100, so I can rebuild the string bit by bit.
 
 ## How I did it
 
@@ -36,4 +36,4 @@ You need `matplotlib` for the charts. When it runs, it prints the best parameter
 
 ## Author
 
-Athanasios Fourkiotis — student ID 4940
+Athanasios Fourkiotis, student ID 4940
