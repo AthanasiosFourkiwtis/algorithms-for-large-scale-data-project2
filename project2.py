@@ -18,20 +18,20 @@ class CountMinSketch:
         self.d = d
         self.w = w
 
-        # Megalos protos arithmos, p > 2^100
+        # Large prime, p > 2^100
         self.p = P
 
-        # Kanonikos pinakas Count-Min
+        # The standard Count-Min table
         self.table = [[0 for _ in range(w)] for _ in range(d)]
         self.touched = [set() for _ in range(d)]
 
-        # Gia kathe keli krataw kai 100 athroismata, ena gia kathe bit
-        # Ta krataw sparse, gia na min arxikopoiw ola ta adeia kelia se kathe peirama
+        # For every cell we also keep 100 sums, one per bit
+        # Kept sparse, so all the empty cells aren't initialized on every experiment
         self.bit_sums = [{} for _ in range(d)]
 
-        # Vec_p oikogeneia: kathe hash function exei BITS aneksarthtous syntelestes
+        # Vec_p family: each hash function has BITS independent coefficients
         # h_i(s) = (a[i][0]*s0 + a[i][1]*s1 + ... + a[i][99]*s99 + b[i]) mod p mod w
-        # to string antimetopizetai ws dianysma bits sto Z_p
+        # the string is treated as a bit vector over Z_p
         self.a = [[random.randint(0, self.p - 1) for _ in range(BITS)] for _ in range(d)]
         self.b = [random.randint(0, self.p - 1) for _ in range(d)]
 
@@ -44,21 +44,21 @@ class CountMinSketch:
         return bits
 
     def _hash_from_bits(self, bits, i):
-        # Vec_p: esoteriko ginomeno tou dianysmatos bits tou s me ta a[i][.], +b[i], mod p
+        # Vec_p: inner product of s's bit vector with a[i][.], plus b[i], mod p
         val = self.b[i]
         row_a = self.a[i]
         for bit in bits:
             val += row_a[bit]
 
-        # Teliko mod w: pernaei to apotelesma sto eyros [0, w) twn sthlwn tou Count-Min
+        # Final mod w: maps the result into the [0, w) column range of the Count-Min
         return val % self.p % self.w
 
     def hash(self, x, i):
         return self._hash_from_bits(self._set_bits(x), i)
 
     def update(self, s, c):
-        # To s einai akeraios pou antistoixei sto 100-bit string
-        # To c mporei na einai kai arnitiko, giati i domi einai grammiki
+        # s is the integer corresponding to the 100-bit string
+        # c may also be negative, since the structure is linear
         set_bits = self._set_bits(s)
 
         for i in range(self.d):
@@ -66,7 +66,7 @@ class CountMinSketch:
             self.table[i][pos] += c
             self.touched[i].add(pos)
 
-            # Prosthetw to c mono sta bits pou einai 1.
+            # Add c only to the bits that are 1.
             row_bit_sums = self.bit_sums[i]
             if pos not in row_bit_sums:
                 row_bit_sums[pos] = [0 for _ in range(BITS)]
@@ -76,18 +76,18 @@ class CountMinSketch:
                 bucket_bits[bit] += c
 
     def find_answer(self):
-        # Psaxnw gia keli pou fainetai na exei apomonwmeno to stoixeio me timi 100
+        # Look for a cell that appears to hold the isolated element with value 100
         for i in range(self.d):
             for j in self.touched[i]:
                 total = self.table[i][j]
                 bits = self.bit_sums[i].get(j)
 
-                # Periptwsi opou i apantisi einai to string me ola ta bits 0
+                # The case where the answer is the all-zero-bits string
                 if total == 100 and bits is None:
                     return 0
 
-                # An to bary stoixeio einai mono tou se auto to keli,
-                # tote to total einai 100 kai kathe bit-sum einai 0 i 100
+                # If the heavy element sits alone in this cell,
+                # then total is 100 and every bit-sum is either 0 or 100
                 if total == 100 and all(v == 0 or v == 100 for v in bits):
                     answer = 0
                     for bit in range(BITS):
@@ -95,7 +95,7 @@ class CountMinSketch:
                             answer |= 1 << bit
                     return answer
 
-        # Se periptwsi pou den apomonwthike se kamia grammi
+        # The case where it never got isolated in any row
         return None
 
 
@@ -111,7 +111,7 @@ def random_strings(n):
 
 
 def int_to_100bit_string(x):
-    # Metatrepei ton akeraio x se string 100 bits
+    # Converts the integer x into a 100-bit string
     return format(x, f"0{BITS}b")
 
 
@@ -133,8 +133,8 @@ def one_test():
 
 
 def one_verbose_test():
-    # Ena paradeigma ektelesis opou typwnw kai tin pragmatiki apantisi
-    # kai tin apantisi pou epestrepse o algorithmos.
+    # One example run that prints both the true answer
+    # and the answer the algorithm returned.
     cms = CountMinSketch(D, W)
     strings = random_strings(1000)
 
@@ -158,7 +158,7 @@ def one_verbose_test():
 
 
 def experiment():
-    # I ekfwnisi zita 1000 tyxaies symvoloseires ana peirama.
+    # The handout asks for 1000 random strings per experiment.
     trials = 1000
     success = 0
 
@@ -166,9 +166,9 @@ def experiment():
         if one_test():
             success += 1
 
-    print("Epityxies:", success)
-    print("Synolika peiramata:", trials)
-    print("Pososto epityxias:", success / trials * 100, "%")
+    print("Successes:", success)
+    print("Total experiments:", trials)
+    print("Success rate:", success / trials * 100, "%")
 
 
 def success_probability(d, w):
@@ -203,12 +203,12 @@ def plot_success_probability():
 
     plt.figure(figsize=(8, 5))
     plt.plot(ds, probs, marker="o")
-    plt.axhline(y=0.99, linestyle="--", label="99% όριο")
-    plt.axvline(x=D, linestyle="--", label=f"επιλογή d = {D}")
+    plt.axhline(y=0.99, linestyle="--", label="99% threshold")
+    plt.axvline(x=D, linestyle="--", label=f"chosen d = {D}")
 
-    plt.xlabel("Πλήθος γραμμών d")
-    plt.ylabel("Πιθανότητα επιτυχίας")
-    plt.title(f"Πιθανότητα επιτυχίας για w = {W}")
+    plt.xlabel("Number of rows d")
+    plt.ylabel("Success probability")
+    plt.title(f"Success probability for w = {W}")
     plt.grid(True)
     plt.legend()
     plt.tight_layout()
@@ -230,11 +230,11 @@ def plot_parameter_search():
 
     plt.figure(figsize=(8, 5))
     plt.plot(ds, cells, marker="o")
-    plt.axvline(x=D, linestyle="--", label=f"επιλογή d = {D}")
+    plt.axvline(x=D, linestyle="--", label=f"chosen d = {D}")
 
-    plt.xlabel("Πλήθος γραμμών d")
-    plt.ylabel("Βασικά Count-Min κελιά d x w")
-    plt.title("Αναζήτηση παραμέτρων για πιθανότητα επιτυχίας >= 99%")
+    plt.xlabel("Number of rows d")
+    plt.ylabel("Base Count-Min cells d x w")
+    plt.title("Parameter search for success probability >= 99%")
     plt.grid(True)
     plt.legend()
     plt.tight_layout()
@@ -242,15 +242,15 @@ def plot_parameter_search():
     plt.close()
 
     print()
-    print("Pinakas parametrwn apo to grafima:")
+    print("Parameter table from the chart:")
     print("d\tw_min\td*w")
     for d, w, cell_count in zip(ds, ws, cells):
         print(f"{d}\t{w}\t{cell_count}")
 
 
 def main():
-    # Den vazw fixed seed: thelw to peirama na vgazei diaforetiko apotelesma kathe fora,
-    # gia na fenetai oti to ~99% epityxias den einai stimeno.
+    # No fixed seed on purpose: the experiment should give a different result on
+    # every run, to show the ~99% success rate is not staged.
     best_d, best_w, best_cells = find_best_parameters()
 
     print("Best parameters from search for d = 1,...,100:")
